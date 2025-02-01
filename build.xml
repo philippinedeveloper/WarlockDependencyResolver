@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="WarlockDependencyResolver" basedir="." default="compile">
+
+    <!-- Set the source and destination directories -->
+    <property name="src.dir" value="src"/>
+    <property name="build.dir" value="build"/>
+    <property name="jar.dir" value="jar"/>
+
+    <!-- Define the Java source files -->
+    <property name="main.class" value="DependencyResolver"/>
+
+    <!-- Create directories -->
+    <target name="init">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${jar.dir}"/>
+    </target>
+
+    <!-- Clean build directories -->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="${jar.dir}"/>
+    </target>
+
+    <!-- Compile the Java source code -->
+    <target name="compile" depends="init">
+        <javac srcdir="${src.dir}" destdir="${build.dir}"/>
+    </target>
+
+    <!-- Package the compiled classes into a JAR file -->
+    <target name="jar" depends="compile">
+        <jar destfile="${jar.dir}/DependencyResolver.jar" basedir="${build.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main.class}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- Define the default target -->
+    <target name="default" depends="clean, compile, jar"/>
+</project>
