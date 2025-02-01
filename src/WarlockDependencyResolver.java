@@ -72,17 +72,17 @@ public class WarlockDependencyResolver {
     }
 
     private static void mergeLibrariesAndResources(String[] jarPaths) throws IOException {
-    String outputJarPath = "merged-output.jar";
-    Set<String> classNames = new HashSet<>();
+       String outputJarPath = "merged-output.jar";
+       Set<String> classNames = new HashSet<>();
 
-    try (JarOutputStream jarOut = new JarOutputStream(new FileOutputStream(outputJarPath))) {
-        for (String jarPath : jarPaths) {
-            try (JarFile jarFile = new JarFile(jarPath)) {
+      try (JarOutputStream jarOut = new JarOutputStream(new FileOutputStream(outputJarPath))) {
+         for (String jarPath : jarPaths) {
+             try (JarFile jarFile = new JarFile(jarPath)) {
                 Enumeration<JarEntry> entries = jarFile.entries();
                 while (entries.hasMoreElements()) {
                     JarEntry entry = entries.nextElement();
 
-                    if (entry.isDirectory() || entry.getName().startsWith("META-INF")) {
+                    if (entry.isDirectory() || entry.getName().startsWith("META-INF") || entry.getName().equals("AndroidManifest.xml")) {
                         continue;
                     }
 
@@ -101,21 +101,22 @@ public class WarlockDependencyResolver {
                             in.transferTo(jarOut);
                         }
                         jarOut.closeEntry();
-                    }
-                }
-            }
-        }
-    }
-    System.out.println("Merged libraries and resources into " + outputJarPath);
-}
+                      }
+                  }
+              }
+          }
+      }
+        System.out.println("Merged libraries and resources into " + outputJarPath);
+  }
 
-    private static void mergeXmlDocuments(Document base, Document toMerge) {
+
+  private static void mergeXmlDocuments(Document base, Document toMerge) {
         NodeList childNodes = toMerge.getDocumentElement().getChildNodes();
         for (int i = 0; i < childNodes.getLength(); i++) {
             Node node = base.importNode(childNodes.item(i), true);
             base.getDocumentElement().appendChild(node);
         }
-    }
+  }
 
     private static void writeXmlToFile(Document doc, String filePath) throws Exception {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
