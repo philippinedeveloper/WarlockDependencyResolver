@@ -38,8 +38,7 @@ public class WarlockDependencyResolver {
 
     private static void resolveDependencies(String mainManifestPath, String[] jarPaths) throws Exception {
         mergeAndroidManifests(mainManifestPath, jarPaths);
-        mergeLibraries(jarPaths);
-        mergeResources(jarPaths);
+        mergeLibrariesAndResources(jarPaths); // Now this method will handle both libraries and resources.
     }
 
     private static void mergeAndroidManifests(String mainManifestPath, String[] jarPaths) throws Exception {
@@ -72,15 +71,31 @@ public class WarlockDependencyResolver {
         System.out.println("Merged AndroidManifest.xml");
     }
 
-    private static void mergeLibraries(String[] jarPaths) throws IOException {
-        String outputJarPath = "merged-output.jar";
+    private static void mergeLibrariesAndResources(String[] jarPaths) throws IOException {
+        String outputJarPath = "merged-output.jar";  // Output path for the merged JAR
         try (JarOutputStream jarOut = new JarOutputStream(new FileOutputStream(outputJarPath))) {
             for (String jarPath : jarPaths) {
                 try (JarFile jarFile = new JarFile(jarPath)) {
                     Enumeration<JarEntry> entries = jarFile.entries();
                     while (entries.hasMoreElements()) {
                         JarEntry entry = entries.nextElement();
-                        if (!entry.isDirectory() && !entry.getName().startsWith("META-INF")) {
+
+                        // Skip directories and META-INF files
+                        if (entry.isDirectory() || entry.getName().startsWith("META-INF")) {
+                            continue;
+                        }
+
+                        // Merge class files (everything ending with .class)
+                        if (entry.getName().endsWith(".class")) {
+                            jarOut.putNextEntry(new JarEntry(entry.getName()));
+                            try (InputStream in = jarFile.getInputStream(entry)) {
+                                in.transferTo(jarOut);
+                            }
+                            jarOut.closeEntry();
+                        }
+
+                        // Merge resources (those that start with "res/")
+                        if (entry.getName().startsWith("res/")) {
                             jarOut.putNextEntry(new JarEntry(entry.getName()));
                             try (InputStream in = jarFile.getInputStream(entry)) {
                                 in.transferTo(jarOut);
@@ -91,29 +106,7 @@ public class WarlockDependencyResolver {
                 }
             }
         }
-        System.out.println("Merged libraries into " + outputJarPath);
-    }
-
-    private static void mergeResources(String[] jarPaths) throws IOException {
-        Path outputResourcesPath = Paths.get("merged-resources");
-        Files.createDirectories(outputResourcesPath);
-
-        for (String jarPath : jarPaths) {
-            try (JarFile jarFile = new JarFile(jarPath)) {
-                Enumeration<JarEntry> entries = jarFile.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-                    if (entry.getName().startsWith("res/")) {
-                        Path outputPath = outputResourcesPath.resolve(entry.getName());
-                        Files.createDirectories(outputPath.getParent());
-                        try (InputStream in = jarFile.getInputStream(entry)) {
-                            Files.copy(in, outputPath, StandardCopyOption.REPLACE_EXISTING);
-                        }
-                    }
-                }
-            }
-        }
-        System.out.println("Merged resources into " + outputResourcesPath.toAbsolutePath());
+        System.out.println("Merged libraries and resources into " + outputJarPath);
     }
 
     private static void mergeXmlDocuments(Document base, Document toMerge) {
