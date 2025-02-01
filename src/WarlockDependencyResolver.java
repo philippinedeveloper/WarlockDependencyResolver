@@ -2,8 +2,12 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.jar.*;
+import java.util.zip.ZipEntry;  // Add this import
 import javax.xml.parsers.*;
 import org.w3c.dom.*;
+import javax.xml.transform.*;  // Add this import for Transformer
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.dom.DOMSource;
 import java.util.Scanner;
 
 public class WarlockDependencyResolver {
