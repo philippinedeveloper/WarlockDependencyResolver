@@ -2,10 +2,10 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.jar.*;
-import java.util.zip.ZipEntry;  // Add this import
+import java.util.zip.ZipEntry;
 import javax.xml.parsers.*;
 import org.w3c.dom.*;
-import javax.xml.transform.*;  // Add this import for Transformer
+import javax.xml.transform.*;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.dom.DOMSource;
 import java.util.Scanner;
@@ -16,10 +16,8 @@ public class WarlockDependencyResolver {
         Scanner scanner = new Scanner(System.in);
 
         String mainManifestPath = "AndroidManifest.xml";
-        if (!Files.exists(Paths.get(mainManifestPath))) {
-            System.out.println("No AndroidManifest.xml found in the current directory. Please ensure the file exists.");
-            return;
-        }
+
+        System.out.println("Proceeding without checking for AndroidManifest.xml existence.");
 
         System.out.println("Enter the number of JAR files you want to resolve:");
         int numJars = Integer.parseInt(scanner.nextLine());
@@ -47,7 +45,17 @@ public class WarlockDependencyResolver {
     private static void mergeAndroidManifests(String mainManifestPath, String[] jarPaths) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
-        Document mainManifest = builder.parse(new File(mainManifestPath));
+
+        Document mainManifest = null;
+
+        Path manifestPath = Paths.get(mainManifestPath);
+        if (Files.exists(manifestPath)) {
+            mainManifest = builder.parse(new File(mainManifestPath));
+        } else {
+            mainManifest = builder.newDocument();
+            Element root = mainManifest.createElement("manifest");
+            mainManifest.appendChild(root);
+        }
 
         for (String jarPath : jarPaths) {
             try (JarFile jarFile = new JarFile(jarPath)) {
@@ -122,8 +130,7 @@ public class WarlockDependencyResolver {
         transformer.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes");
 
         try (FileOutputStream output = new FileOutputStream(filePath)) {
-            transformer.transform(new javax.xml.transform.dom.DOMSource(doc),
-                                  new javax.xml.transform.stream.StreamResult(output));
+            transformer.transform(new DOMSource(doc), new StreamResult(output));
         }
     }
 }
