@@ -23,8 +23,7 @@
 
     <!-- Compile the Java source code -->
     <target name="compile" depends="init">
-        <javac srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false">
-        </javac>
+        <javac srcdir="${src.dir}" destdir="${build.dir}" includeantruntime="false"/>
     </target>
 
     <!-- Package the compiled classes into a JAR file -->
