@@ -7,7 +7,7 @@
     <property name="jar.dir" value="jar"/>
 
     <!-- Define the Java source files -->
-    <property name="main.class" value="DependencyResolver"/>
+    <property name="main.class" value="WarlockDependencyResolver"/>
 
     <!-- Create directories -->
     <target name="init">
@@ -28,7 +28,7 @@
 
     <!-- Package the compiled classes into a JAR file -->
     <target name="jar" depends="compile">
-        <jar destfile="${jar.dir}/DependencyResolver.jar" basedir="${build.dir}">
+        <jar destfile="${jar.dir}/WarlockDependencyResolver.jar" basedir="${build.dir}">
             <manifest>
                 <attribute name="Main-Class" value="${main.class}"/>
             </manifest>
