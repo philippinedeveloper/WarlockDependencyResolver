@@ -42,86 +42,89 @@ public class WarlockDependencyResolver {
     }
 
     private static void mergeAndroidManifests(String mainManifestPath, String[] jarPaths) throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
+       DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+       DocumentBuilder builder = factory.newDocumentBuilder();
 
-        Document mainManifest = null;
+       Document mainManifest = null;
 
-        Path manifestPath = Paths.get(mainManifestPath);
-        if (Files.exists(manifestPath)) {
-            mainManifest = builder.parse(new File(mainManifestPath));
-        } else {
-            mainManifest = builder.newDocument();
-            Element root = mainManifest.createElement("manifest");
-            mainManifest.appendChild(root);
-        }
+       Path manifestPath = Paths.get(mainManifestPath);
+       if (Files.exists(manifestPath)) {
+           mainManifest = builder.parse(new File(mainManifestPath));
+       } else {
+           mainManifest = builder.newDocument();
+           Element root = mainManifest.createElement("manifest");
+           // Declare the android namespace for the root element
+           root.setAttribute("xmlns:android", "http://schemas.android.com/apk/res/android");
+           mainManifest.appendChild(root);
+       }
 
-        for (String jarPath : jarPaths) {
-            // Handle JAR or ZIP file
-            File jarFile = new File(jarPath);
-            if (!jarFile.exists()) {
-                System.out.println("File does not exist: " + jarPath);
-                continue;
-            }
+       for (String jarPath : jarPaths) {
+           File jarFile = new File(jarPath);
+           if (!jarFile.exists()) {
+               System.out.println("File does not exist: " + jarPath);
+               continue;
+           }
 
-            try (JarFile jar = openJarFile(jarFile)) {
-                ZipEntry manifestEntry = jar.getEntry("AndroidManifest.xml");
-                if (manifestEntry != null) {
-                    InputStream input = jar.getInputStream(manifestEntry);
-                    Document doc = builder.parse(input);
-                    mergeXmlDocuments(mainManifest, doc);
-                }
-            }
-        }
+           try (JarFile jar = new JarFile(jarFile)) {
+               ZipEntry manifestEntry = jar.getEntry("AndroidManifest.xml");
+               if (manifestEntry != null) {
+                   System.out.println("Found manifest in: " + jarPath);
+                   InputStream input = jar.getInputStream(manifestEntry);
+                   Document doc = builder.parse(input);
 
-        writeXmlToFile(mainManifest, mainManifestPath);
-        System.out.println("Merged AndroidManifest.xml");
-    }
+                   // Ensure android namespace is declared
+                   Element docRoot = doc.getDocumentElement();
+                   if (!docRoot.hasAttribute("xmlns:android")) {
+                       docRoot.setAttribute("xmlns:android", "http://schemas.android.com/apk/res/android");
+                   }
 
-    private static JarFile openJarFile(File file) throws IOException {
-        if (file.getName().endsWith(".zip")) {
-            return new JarFile(file);
-        } else {
-            return new JarFile(file);
-        }
+                   mergeXmlDocuments(mainManifest, doc);
+               }
+           }
+       }
+
+       writeXmlToFile(mainManifest, mainManifestPath);
+       System.out.println("Merged AndroidManifest.xml");
     }
 
     private static void mergeLibrariesAndResources(String[] jarPaths) throws IOException {
        String outputJarPath = "merged-output.jar";
        Set<String> classNames = new HashSet<>();
 
-      try (JarOutputStream jarOut = new JarOutputStream(new FileOutputStream(outputJarPath))) {
-         for (String jarPath : jarPaths) {
-             try (JarFile jarFile = new JarFile(jarPath)) {
-                Enumeration<JarEntry> entries = jarFile.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
+       try (JarOutputStream jarOut = new JarOutputStream(new FileOutputStream(outputJarPath))) {
+           for (String jarPath : jarPaths) {
+               try (JarFile jarFile = new JarFile(jarPath)) {
+                   Enumeration<JarEntry> entries = jarFile.entries();
+                   while (entries.hasMoreElements()) {
+                       JarEntry entry = entries.nextElement();
 
-                    if (entry.isDirectory() || entry.getName().startsWith("META-INF") || entry.getName().equals("AndroidManifest.xml")) {
-                        continue;
-                    }
+                       if (entry.isDirectory() || entry.getName().startsWith("META-INF") || entry.getName().equals("AndroidManifest.xml")) {
+                           continue;
+                       }
 
-                    if (entry.getName().endsWith(".class") && !classNames.contains(entry.getName())) {
-                        classNames.add(entry.getName());
-                        jarOut.putNextEntry(new JarEntry(entry.getName()));
-                        try (InputStream in = jarFile.getInputStream(entry)) {
-                            in.transferTo(jarOut);
-                        }
-                        jarOut.closeEntry();
-                    }
+                       // Only add unique class files
+                       if (entry.getName().endsWith(".class") && !classNames.contains(entry.getName())) {
+                           classNames.add(entry.getName());
+                           jarOut.putNextEntry(new JarEntry(entry.getName()));
+                           try (InputStream in = jarFile.getInputStream(entry)) {
+                               in.transferTo(jarOut);
+                           }
+                           jarOut.closeEntry();
+                       }
 
-                    if (entry.getName().startsWith("res/")) {
-                        jarOut.putNextEntry(new JarEntry(entry.getName()));
-                        try (InputStream in = jarFile.getInputStream(entry)) {
-                            in.transferTo(jarOut);
-                        }
-                        jarOut.closeEntry();
-                    }
-                }
-             }
-         }
-      }
-        System.out.println("Merged libraries and resources into " + outputJarPath);
+                       // Add resource files (res/)
+                       if (entry.getName().startsWith("res/")) {
+                           jarOut.putNextEntry(new JarEntry(entry.getName()));
+                           try (InputStream in = jarFile.getInputStream(entry)) {
+                               in.transferTo(jarOut);
+                           }
+                           jarOut.closeEntry();
+                       }
+                   }
+               }
+           }
+       }
+       System.out.println("Merged libraries and resources into " + outputJarPath);
     }
 
     private static void mergeXmlDocuments(Document base, Document toMerge) {
