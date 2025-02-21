@@ -38,7 +38,7 @@ public class WarlockDependencyResolver {
 
     private static void resolveDependencies(String mainManifestPath, String[] jarPaths) throws Exception {
         mergeAndroidManifests(mainManifestPath, jarPaths);
-        mergeLibrariesAndResources(jarPaths); // Now this method will handle both libraries and resources.
+        mergeLibrariesAndResources(jarPaths); 
     }
 
     private static void mergeAndroidManifests(String mainManifestPath, String[] jarPaths) throws Exception {
@@ -57,10 +57,17 @@ public class WarlockDependencyResolver {
         }
 
         for (String jarPath : jarPaths) {
-            try (JarFile jarFile = new JarFile(jarPath)) {
-                ZipEntry manifestEntry = jarFile.getEntry("AndroidManifest.xml");
+            // Handle JAR or ZIP file
+            File jarFile = new File(jarPath);
+            if (!jarFile.exists()) {
+                System.out.println("File does not exist: " + jarPath);
+                continue;
+            }
+
+            try (JarFile jar = openJarFile(jarFile)) {
+                ZipEntry manifestEntry = jar.getEntry("AndroidManifest.xml");
                 if (manifestEntry != null) {
-                    InputStream input = jarFile.getInputStream(manifestEntry);
+                    InputStream input = jar.getInputStream(manifestEntry);
                     Document doc = builder.parse(input);
                     mergeXmlDocuments(mainManifest, doc);
                 }
@@ -69,6 +76,14 @@ public class WarlockDependencyResolver {
 
         writeXmlToFile(mainManifest, mainManifestPath);
         System.out.println("Merged AndroidManifest.xml");
+    }
+
+    private static JarFile openJarFile(File file) throws IOException {
+        if (file.getName().endsWith(".zip")) {
+            return new JarFile(file);
+        } else {
+            return new JarFile(file);
+        }
     }
 
     private static void mergeLibrariesAndResources(String[] jarPaths) throws IOException {
@@ -101,22 +116,21 @@ public class WarlockDependencyResolver {
                             in.transferTo(jarOut);
                         }
                         jarOut.closeEntry();
-                      }
-                  }
-              }
-          }
+                    }
+                }
+             }
+         }
       }
         System.out.println("Merged libraries and resources into " + outputJarPath);
-  }
+    }
 
-
-  private static void mergeXmlDocuments(Document base, Document toMerge) {
+    private static void mergeXmlDocuments(Document base, Document toMerge) {
         NodeList childNodes = toMerge.getDocumentElement().getChildNodes();
         for (int i = 0; i < childNodes.getLength(); i++) {
             Node node = base.importNode(childNodes.item(i), true);
             base.getDocumentElement().appendChild(node);
         }
-  }
+    }
 
     private static void writeXmlToFile(Document doc, String filePath) throws Exception {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
@@ -128,3 +142,4 @@ public class WarlockDependencyResolver {
         }
     }
 }
+
